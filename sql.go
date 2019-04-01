@@ -3,50 +3,48 @@ package main
 import (
 	"database/sql"
 	_ "github.com/mattn/go-sqlite3"
-	"time"
+	"log"
 )
 
-func dont_panic(err error) {
-	if err != nil {
-		return
-	}
-}
 func CreateTable() {
-	table := `CREATE TABLE "dnsdata" ( 
+	table := `CREATE TABLE IF NOT EXISTS "dnsdata" ( 
 				"timestamp" TEXT,
 				"server" TEXT,
 				"qname" TEXT,
 				"rtt" REAL,
 				"rcode" TEXT);`
-	query := `SELECT * FROM dnsdata;`
-	db, err :=sql.Open("sqlite3", "./dns.db")
-	handle_err(err)
-	rows, err := db.Query(query)
-	if rows != nil {
-			return
-	}
+	db, err := sql.Open("sqlite3", "./db/dns.db")
 	if err != nil {
-			stmt, err := db.Prepare(table)
-			handle_err(err)
-			stmt.Exec()
+		log.Fatal("[sql.go]", "Unable to open db 'dns.db'", err)
 	}
+	log.Print("[sql.go] Creating table 'dnsdata' if it doesn't already exist")
+	stmt, err := db.Prepare(table)
+	if err != nil {
+		log.Print("[sql.go]", "Unable to prepare create table sql statement", err)
+	}
+	stmt.Exec()
+
 	db.Close()
 }
 
-func InsertData(server string, qname string, rtt float64, rcode string) {
-	timestamp := time.Now().Format("2006-01-02 15:04:05")
+func InsertData(timestamp string, server string, qname string, rtt float64, rcode string) {
 	sqlquery := `INSERT INTO "dnsdata" (
 				"timestamp",
 				"server",
 				"qname",
 				"rtt",
 				"rcode") values (
-				?, ?, ?, ?, ? );` 
-	db, err :=sql.Open("sqlite3", "./dns.db")
-	handle_err(err)
+				?, ?, ?, ?, ? );`
+	db, err := sql.Open("sqlite3", "./db/dns.db")
+
+	if err != nil {
+		log.Fatal("[sql.go]", "Unable to open db 'dns.db'", err)
+	}
+
 	stmt, err := db.Prepare(sqlquery)
-	handle_err(err)
+	if err != nil {
+		log.Fatal("[sql.go]", "Unable prepare insert sql statement", err)
+	}
 	stmt.Exec(timestamp, server, qname, rtt, rcode)
 
 }
-
